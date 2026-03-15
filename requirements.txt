@@ -3,3 +3,4 @@ pypdf
 nltk
 tiktoken
 chromadb
+python-dotenv
