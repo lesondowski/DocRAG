@@ -5,8 +5,8 @@ import google.genai as genai
 load_dotenv()
 class GeminiEmbedder:
     def __init__(self):
-        api_key = os.getenv("GENAI_API_KEY")
-        self.client = genai.Client(api_key=api_key) # Khởi tạo gemini client
+        api_key = os.getenv("GEMINI_API_KEY")
+        self.client = genai.Client(api_key=api_key)
 
     def embed_text(self, text: str):
 
@@ -16,7 +16,7 @@ class GeminiEmbedder:
             contents=text
         )
         return response.embeddings[0].values
-    
+
     def embed_chunks(self, chunks):
         embedded_chunks = []
         for chunk in chunks:
