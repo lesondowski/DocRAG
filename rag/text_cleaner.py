@@ -1,6 +1,5 @@
 import re
 # Gemini Cookbook best practices
-
 def clean_text(text):
 
     text = re.sub(r"\n+", "\n", text)

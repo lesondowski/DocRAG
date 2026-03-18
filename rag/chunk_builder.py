@@ -1,5 +1,5 @@
-from text_cleaner import clean_text
-from chunking import Chunker
+from rag.text_cleaner import clean_text
+from rag.chunking import Chunker
 
 
 def build_chunks(documents):

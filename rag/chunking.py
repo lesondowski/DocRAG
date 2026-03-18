@@ -1,4 +1,4 @@
-from tokenizer import Tokenizer
+from rag.tokenizer import Tokenizer
 
 class Chunker:
     def __init__(self, chunk_size=300, overlap=50):
