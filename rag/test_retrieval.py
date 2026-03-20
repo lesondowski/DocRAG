@@ -1,5 +1,9 @@
-from embedding import GeminiEmbedder
-from retriever import Retriever
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from rag.embedding import GeminiEmbedder
+from rag.retriever import Retriever
 
 
 query = "Hướng dẫn chụp hình audit?"

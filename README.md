@@ -16,3 +16,5 @@ Dưới đây là triển khai chi tiết phần Chunking Strategy trong pipelin
 - Generator sử dụng JSON mode của Gemini để trả về structured output, tránh hallucination.
 - System prompt định danh AI chỉ trả lời dựa trên context, yêu cầu trích dẫn nguồn rõ ràng.
 - Context injection ghép metadata vào prompt để AI dễ dàng cite nguồn (ví dụ: "Theo trang 12, tài liệu X").
+
+Token Management & Cost Optimization

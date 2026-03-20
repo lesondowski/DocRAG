@@ -1,7 +1,11 @@
-from embedding import GeminiEmbedder
-from retriever import Retriever
-from context_builder import ContextBuilder
-from generator import Generator
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from rag.embedding import GeminiEmbedder
+from rag.retriever import Retriever
+from rag.context_builder import ContextBuilder
+from rag.generator import Generator
 
 
 question = "Hướng dẫn chụp hình Audit?"

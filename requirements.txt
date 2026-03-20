@@ -4,3 +4,4 @@ nltk
 tiktoken
 chromadb
 python-dotenv
+tqdm

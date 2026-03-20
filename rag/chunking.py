@@ -1,7 +1,7 @@
 from rag.tokenizer import Tokenizer
 
 class Chunker:
-    def __init__(self, chunk_size=300, overlap=50):
+    def __init__(self, chunk_size=500, overlap=100):
         self.chunk_size = chunk_size
         self.overlap = overlap
 #       self.max_tokens = max_tokens ( Có thể thêm vào sau tùy vào việc điều chỉnh kết quả của chunking)

@@ -12,5 +12,3 @@ def load_pdf(file_path):
                 "text": text
             })
     return pages
-
-

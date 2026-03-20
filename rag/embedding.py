@@ -19,17 +19,17 @@ class GeminiEmbedder:
 
     def embed_chunks(self, chunks):
         embedded_chunks = []
+        # Use a more efficient batch embedding if the API and library support it in the future
         for chunk in chunks:
-            text = chunk["content"]
-            embedding = self.embed_text(text)
+            embedding = self.embed_text(chunk["content"])
             embedded_chunks.append(
                 {
-                    "content": text,
+                    "id": chunk["id"],
+                    "content": chunk["content"],
                     "embedding": embedding,
                     "metadata": chunk["metadata"]
                 }
             )
-
         return embedded_chunks
 
 

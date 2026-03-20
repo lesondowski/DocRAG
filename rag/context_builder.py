@@ -5,14 +5,18 @@ class ContextBuilder:
         documents = retrieved_docs["documents"][0]
         metadatas = retrieved_docs["metadatas"][0]
 
-        context = ""
+        context = []
         # chỉ định tài liệu nào được sử dụng để trả lời câu hỏi
-        for doc, meta in zip(documents, metadatas):
-            source = meta.get("source", f"Trang {meta.get('page', 'N/A')}")
-            context += f"""
-            Nguồn: {source}
-            Nội dung:
-            {doc}
-            ---
-            """
-        return context
+        for i, (doc, meta) in enumerate(zip(documents, metadatas)):
+            source = meta.get("source", "unknown")
+            page = meta.get("page", "N/A")
+
+            context.append(
+                f"""[DOC {i}]
+                source: {source}
+                page: {page}
+                content:
+                {doc}"""
+            )
+
+        return "\n\n".join(context)
