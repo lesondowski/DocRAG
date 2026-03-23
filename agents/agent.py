@@ -20,21 +20,21 @@ class Agent:
         tool_list = self.tools.list_tools()
 
         prompt = f"""
-You are an autonomous AI agent.
+Bạn là một tác nhân AI tự động (autonomous AI agent).
 
-You can use tools.
+Bạn có thể sử dụng các công cụ.
 
-Available tools:
+Các công cụ có sẵn:
 {tool_list}
 
-Use the following format:
+Hãy sử dụng định dạng sau:
 
-Thought: reasoning
-Action: tool_name
-Action Input: input
-Observation: result
+Thought: suy luận
+Action: tên công cụ
+Action Input: dữ liệu đầu vào
+Observation: kết quả
 
-Question: {question}
+Câu hỏi: {question}
 
 {scratchpad}
 

@@ -1,4 +1,6 @@
 import chromadb
+
+# Semantic Retrieval + Grounding + Tool-Augmented Retrieval
 class Retriever:
 
     def __init__(self):
@@ -11,7 +13,7 @@ class Retriever:
             name="rag_documents"
         )
 
-    def retrieve(self, query_embedding, k=3):
+    def retrieve(self, query_embedding, k=4):
 
         results = self.collection.query(
             query_embeddings=[query_embedding],

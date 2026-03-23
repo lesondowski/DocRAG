@@ -12,9 +12,7 @@ class ContextBuilder:
             page = meta.get("page", "N/A")
 
             context.append(
-                f"""[DOC {i}]
-                source: {source}
-                page: {page}
+                f"""[{source}/{page}]
                 content:
                 {doc}"""
             )

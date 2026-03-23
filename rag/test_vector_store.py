@@ -10,7 +10,7 @@ from rag.vector_store import VectorStore
 
 documents = load_pdf("data/raw/document/pdf/PDF2.pdf")
 
-chunks = build_chunks(documents)
+chunks = build_chunks(documents, "PDF2.pdf", chunking_strategy='auto')  # Auto-detect
 
 print("Total chunks:", len(chunks))
 

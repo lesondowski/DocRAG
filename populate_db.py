@@ -46,7 +46,7 @@ def main():
                 continue
 
             # Build chunks with metadata
-            chunks = build_chunks(pages, str(pdf_path))
+            chunks = build_chunks(pages, pdf_path.name, chunking_strategy='auto')  # Auto-detect strategy
             if not chunks:
                 print(f"No chunks created for {pdf_path.name}. Skipping.")
                 continue

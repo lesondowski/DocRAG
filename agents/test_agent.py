@@ -24,7 +24,7 @@ agent = Agent(registry)
 loop = ReActLoop(agent, registry)
 
 
-question = "Hướng dẫn chụp hình audit?"
+question = "Hướng dẫn tôi chụp hình audit"
 
 result = loop.run(question)
 
