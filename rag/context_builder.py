@@ -1,20 +1,31 @@
+from __future__ import annotations
+
+
 class ContextBuilder:
+    def build(self, retrieved_docs) -> str:
+        documents = retrieved_docs.get("documents", [[]])[0]
+        metadatas = retrieved_docs.get("metadatas", [[]])[0]
 
-    def build(self, retrieved_docs):
+        context_parts = []
 
-        documents = retrieved_docs["documents"][0]
-        metadatas = retrieved_docs["metadatas"][0]
-
-        context = []
-        # chỉ định tài liệu nào được sử dụng để trả lời câu hỏi
-        for i, (doc, meta) in enumerate(zip(documents, metadatas)):
+        for i, (doc, meta) in enumerate(zip(documents, metadatas), start=1):
             source = meta.get("source", "unknown")
             page = meta.get("page", "N/A")
+            section = meta.get("section_heading", "") or meta.get("raw_section_heading", "")
+            raw_title = meta.get("raw_title", "") or meta.get("page_title", "")
+            chunk_type = meta.get("chunk_type", "")
+            block_types = ", ".join(meta.get("block_types", [])) if meta.get("block_types") else ""
 
-            context.append(
-                f"""[{source}/{page}]
-                content:
-                {doc}"""
-            )
+            header = f"[DOC {i}] source={source} | page={page}"
+            if raw_title:
+                header += f" | title={raw_title}"
+            if section:
+                header += f" | section={section}"
+            if chunk_type:
+                header += f" | type={chunk_type}"
+            if block_types:
+                header += f" | blocks={block_types}"
 
-        return "\n\n".join(context)
+            context_parts.append(f"{header}\ncontent:\n{doc}")
+
+        return "\n\n".join(context_parts)

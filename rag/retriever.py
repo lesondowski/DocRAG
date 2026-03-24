@@ -1,23 +1,31 @@
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
 import chromadb
 
-# Semantic Retrieval + Grounding + Tool-Augmented Retrieval
+
 class Retriever:
+    def __init__(self, path: str = "db/chroma_db", collection_name: str = "rag_documents") -> None:
+        self.client = chromadb.PersistentClient(path=path)
+        self.collection = self.client.get_collection(name=collection_name)
 
-    def __init__(self):
+    def retrieve(
+        self,
+        query_embedding,
+        k: int = 8,
+        where: Optional[Dict[str, Any]] = None,
+    ):
+        if not query_embedding:
+            raise ValueError("query_embedding is empty")
 
-        self.client = chromadb.PersistentClient(
-            path="db/chroma_db"
-        )
+        kwargs = {
+            "query_embeddings": [query_embedding],
+            "n_results": k,
+        }
 
-        self.collection = self.client.get_collection(
-            name="rag_documents"
-        )
+        if where:
+            kwargs["where"] = where
 
-    def retrieve(self, query_embedding, k=4):
-
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=k
-        )
-
+        results = self.collection.query(**kwargs)
         return results

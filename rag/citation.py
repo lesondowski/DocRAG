@@ -1,32 +1,43 @@
+from __future__ import annotations
+
 import re
-from pathlib import Path
+from typing import Dict, List
 
 
 class CitationMapper:
+    def __init__(self, metadatas: List[Dict]):
+        self.metadatas = metadatas or []
 
-    def __init__(self, metadatas):
-        self.doc_map = self._build_map(metadatas)
+    def replace(self, answer: str) -> str:
+        """
+        Nếu model sinh [1], [2]... thì map sang nguồn thật.
+        Nếu không có placeholder thì giữ nguyên.
+        """
+        if not answer:
+            return answer
 
-    def _build_map(self, metadatas):
-        doc_map = {}
+        def repl(match):
+            idx = int(match.group(1)) - 1
+            if idx < 0 or idx >= len(self.metadatas):
+                return match.group(0)
 
-        for i, meta in enumerate(metadatas, 1):
-            source = Path(meta.get("source", "unknown")).name
+            meta = self.metadatas[idx]
+            source = meta.get("source", "unknown")
             page = meta.get("page", "N/A")
-            doc_map[i] = (source, page)
+            return f"[{source}, trang {page}]"
 
-        return doc_map
+        return re.sub(r"\[(\d+)\]", repl, answer)
 
-    def replace(self, text: str) -> str:
+    def print_citations(self) -> None:
+        if not self.metadatas:
+            return
 
-        def replace_doc(match):
-            doc_id = int(match.group(1))
-            source, page = self.doc_map.get(doc_id, ("unknown", "N/A"))
-            return f"[{source} - Trang {page}]"
-
-        return re.sub(r"\[DOC (\d+)\]", replace_doc, text)
-
-    def print_citations(self):
-        print("\n>> Citations:")
-        for i, (source, page) in self.doc_map.items():
-            print(f"   [{i}] {source} (Trang {page})")
+        print("\nNguồn tham chiếu:")
+        for i, meta in enumerate(self.metadatas, start=1):
+            source = meta.get("source", "unknown")
+            page = meta.get("page", "N/A")
+            section = meta.get("raw_section_heading") or meta.get("section_heading") or ""
+            line = f"[{i}] {source}, trang {page}"
+            if section:
+                line += f" | section={section}"
+            print(line)

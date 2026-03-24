@@ -1,25 +1,19 @@
-import tiktoken
+from __future__ import annotations
 
-### LLM đếm token chứ không đếm ký tự.
-### Ta sử dụng tokenizer tương thích với các model hiện đại.
-
-class Tokenizer: 
-    def __init__(self):
-        self.encoding = tiktoken.get_encoding("cl100k_base")
-    
-    def encode(self, text):
-        return self.encoding.encode(text)
-    
-    def decode(self, tokens):
-        return self.encoding.decode(tokens)
-    
-    def count_tokens(self, text):
-        return len(self.encode(text))
+from typing import List
 
 
+class Tokenizer:
+    """
+    Tokenizer đơn giản đủ dùng cho chunk sizing nội bộ.
+    Không cần exact tokenizer model-level.
+    """
 
+    def encode(self, text: str) -> List[str]:
+        text = (text or "").strip()
+        if not text:
+            return []
+        return text.split()
 
-
-
-
-
+    def decode(self, tokens: List[str]) -> str:
+        return " ".join(tokens or [])

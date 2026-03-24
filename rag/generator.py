@@ -1,74 +1,71 @@
+from __future__ import annotations
+
 import os
 import json
-import google.genai as genai
+from typing import Any, Dict, Tuple
+
 from dotenv import load_dotenv
+import google.genai as genai
 
 load_dotenv()
 
+
 class Generator:
-
-    def __init__(self, model_name="gemini-2.5-flash-lite"):
+    def __init__(self) -> None:
         api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("Missing GEMINI_API_KEY in environment variables.")
+
         self.client = genai.Client(api_key=api_key)
-        self.model_name = model_name
+        self.default_model = os.getenv("GEMINI_GENERATE_MODEL", "gemini-2.5-flash")
 
-        # Load prompt
-        try:
-            with open("prompts/system_prompt.txt", "r", encoding="utf-8") as f:
-                self.system_prompt = f.read()
-        except FileNotFoundError:
-            print("Warning: prompts/system_prompt.txt not found.")
-            self.system_prompt = "You are a helpful assistant."
+    def _build_prompt(self, query: str, context: str) -> str:
+        return f"""
+Bạn là trợ lý RAG.
+Chỉ trả lời dựa trên context được cung cấp.
+Nếu context không đủ, hãy nói rõ là không đủ thông tin.
+Giữ câu trả lời rõ ràng, ngắn gọn, chính xác.
+Khi dùng thông tin từ tài liệu, giữ nguyên placeholder citation dạng [1], [2]... nếu có trong output mẫu nội bộ.
 
-    def generate(self, question, context, model_name=None):
-        """
-        Generate response with token tracking.
-        
-        Args:
-            question: User question
-            context: Retrieved context from RAG
-            model_name: Optional override for model selection
-            
-        Returns:
-            (result_dict, token_info_dict)
-        """
-        if model_name:
-            self.model_name = model_name
-            
-        prompt = f"""{self.system_prompt}
+[CÂU HỎI]
+{query}
 
-        Ngữ cảnh:
-        {context}
+[CONTEXT]
+{context}
 
-        Câu hỏi:
-        {question}
-        """
-        
+Yêu cầu output JSON hợp lệ:
+{{
+  "answer": "câu trả lời ở đây"
+}}
+""".strip()
+
+    def generate(self, query: str, context: str, model_name: str | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        model = model_name or self.default_model
+        prompt = self._build_prompt(query, context)
+
         response = self.client.models.generate_content(
-            model=self.model_name,
+            model=model,
             contents=prompt,
-            config={
-                "response_mime_type": "application/json"
-            }
         )
-        
-        # Extract token usage from response
-        token_info = {
-            "model": self.model_name,
-            "prompt_tokens": 0,
-            "response_tokens": 0,
-            "total_tokens": 0
-        }
-        
-        # Try to get usage_metadata from response
-        if hasattr(response, 'usage_metadata'):
-            metadata = response.usage_metadata
-            token_info["prompt_tokens"] = metadata.prompt_token_count if hasattr(metadata, 'prompt_token_count') else 0
-            token_info["response_tokens"] = metadata.candidates_token_count if hasattr(metadata, 'candidates_token_count') else 0
-            token_info["total_tokens"] = token_info["prompt_tokens"] + token_info["response_tokens"]
 
+        text = getattr(response, "text", "") or ""
+        text = text.strip()
+
+        parsed: Dict[str, Any]
         try:
-            result = json.loads(response.text)
-            return result, token_info
-        except:
-            return {"answer": "Tôi không thể tạo câu trả lời dựa trên thông tin có sẵn.", "citations": []}, token_info
+            parsed = json.loads(text)
+            if not isinstance(parsed, dict):
+                parsed = {"answer": text}
+        except Exception:
+            parsed = {"answer": text or "Xin lỗi, tôi không thể tạo câu trả lời."}
+
+        usage = getattr(response, "usage_metadata", None)
+
+        token_info = {
+            "model": model,
+            "prompt_tokens": getattr(usage, "prompt_token_count", 0) if usage else 0,
+            "response_tokens": getattr(usage, "candidates_token_count", 0) if usage else 0,
+            "total_tokens": getattr(usage, "total_token_count", 0) if usage else 0,
+        }
+
+        return parsed, token_info

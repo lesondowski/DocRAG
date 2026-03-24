@@ -1,54 +1,55 @@
-from rag.text_cleaner import clean_text
+from __future__ import annotations
+
 from rag.chunking import Chunker
+from rag.metadata_builder import MetadataBuilder
 
 
-def build_chunks(documents, file_name, chunking_strategy='auto'):
-    """
-    Build chunks from documents using specified chunking strategy.
-    
-    Args:
-        documents: List of document dicts with 'text' and 'page'
-        file_name: Source file name
-        chunking_strategy: 'auto', 'text', 'structure', 'semantic', 'function'
-    """
+def build_chunks(documents, file_name, chunking_strategy="auto"):
     chunker = Chunker()
-    dataset = []
+    metadata_builder = MetadataBuilder()
 
-    for doc_id, doc in enumerate(documents):
-        page = doc.get("page", doc_id + 1)
-        text = doc.get("text", "")
-        if not text:
-            continue
-        cleaned_text = clean_text(text)
-        
-        # Auto-detect strategy if requested
-        if chunking_strategy == 'auto':
-            detected_strategy = chunker.auto_detect_strategy(cleaned_text)
-        else:
-            detected_strategy = chunking_strategy
-        
-        # Choose chunking method based on strategy
-        if detected_strategy == 'structure':
-            chunks = chunker.chunk_structure_aware(cleaned_text)
-        elif detected_strategy == 'semantic':
-            chunks = chunker.chunk_semantic(cleaned_text)
-        elif detected_strategy == 'function':
-            chunks = chunker.chunk_function_api(cleaned_text)
-        else:  # 'text'
-            chunks = chunker.chunk_text(cleaned_text)
-        
-        for i, chunk in enumerate(chunks):
-            chunk_id = f"{file_name}-p{page}-c{i}"
-            dataset.append(
-                {
-                    "id": chunk_id,
-                    "content": chunk,
-                    "metadata": {
-                        "source": file_name,
-                        "page": page,
-                        "chunking_strategy": detected_strategy
-                    }
-                }
-            )
+    base_metadata = metadata_builder.build_metadata(
+        filename=file_name,
+        page_number=0,
+        text=file_name,
+        extra={
+            "chunking_strategy": "production_pdf_pipeline",
+            "dedup_enabled": True,
+            "semantic_refine": True,
+            "table_aware": True,
+            "layout_aware": True,
+            "structure_aware": True,
+        },
+    )
 
-    return dataset
+    base_metadata.pop("page", None)
+    base_metadata.pop("source_label", None)
+
+    chunks = chunker.chunk(
+        content=documents,
+        source_name=file_name,
+        base_metadata=base_metadata,
+    )
+
+    enriched = []
+    for i, chunk in enumerate(chunks):
+        text = chunk["content"]
+        page = chunk["metadata"].get("page", 0)
+
+        merged_meta = metadata_builder.build_metadata(
+            filename=file_name,
+            page_number=page,
+            chunk_index=i,
+            text=text,
+            extra=chunk["metadata"],
+        )
+
+        enriched.append(
+            {
+                "id": chunk["id"],
+                "content": text,
+                "metadata": merged_meta,
+            }
+        )
+
+    return enriched
