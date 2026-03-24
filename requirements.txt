@@ -5,10 +5,10 @@ tiktoken
 chromadb
 python-dotenv
 tqdm
-streamlit
 fastapi
 uvicorn
-jinja2
 scikit-learn
 numpy
 python-multipart
+pydantic
+pymupdf
