@@ -107,10 +107,10 @@ Sau đó, bạn có thể bắt đầu đặt câu hỏi. Gõ `quit` hoặc `exi
 Khởi động server FastAPI bằng `uvicorn`:
 
 ```bash
-uvicorn app.api:app --reload
+uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Server sẽ chạy tại `http://127.0.0.1:8000`.
+Server sẽ chạy tại `http://0.0.0.0:8000`.
 
 **Endpoints:**
 
@@ -122,12 +122,12 @@ Server sẽ chạy tại `http://127.0.0.1:8000`.
 
 ```bash
 # Hỏi một câu hỏi
-curl -X POST http://127.0.0.1:8000/ask \
+curl -X POST http://0.0.0.0:8000/ask \
 -H "Content-Type: application/json" \
 -d '{"question": "Câu hỏi của bạn là gì?"}'
 
 # Chạy lại quá trình xử lý tài liệu
-curl -X POST http://127.0.0.1:8000/rebuild-rag
+curl -X POST http://0.0.0.0:8000/rebuild-rag
 ```
 
 ## Cấu hình
