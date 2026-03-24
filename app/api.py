@@ -141,14 +141,12 @@ def ask_question(payload: AskRequest):
 def upload_document(file: UploadFile = File(...)):
     """Chỉ lưu file PDF vào thư mục server (không chunk, không embed, không populate)"""
     try:
-        # Kiểm tra file type
         if not file.filename.endswith(".pdf"):
             raise HTTPException(
                 status_code=400, 
                 detail="Chỉ chấp nhận file PDF"
             )
         
-        # Chỉ lưu file, không xử lý gì thêm
         saved_path = save_upload_file(file, DATA_DIR)
         
         return UploadResponse(
