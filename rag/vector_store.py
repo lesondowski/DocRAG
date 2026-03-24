@@ -6,15 +6,6 @@ import chromadb
 
 
 def _sanitize_metadata_value(value: Any):
-    """
-    Chroma metadata chỉ nên chứa:
-    - str
-    - int
-    - float
-    - bool
-
-    Các kiểu khác sẽ được convert an toàn.
-    """
     if value is None:
         return ""
 

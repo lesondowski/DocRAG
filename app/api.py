@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from rag.embedding import GeminiEmbedder
@@ -9,13 +9,20 @@ from rag.context_builder import ContextBuilder
 from rag.generator import Generator
 from rag.citation import CitationMapper
 from rag.token_manager import TokenManager
-from populate_db import main as rebuild_rag_db
+from app.service.rebuild import rebuild_rag_database
+from app.service.ingest import save_upload_file
+
+from pathlib import Path
 
 
 app = FastAPI(title="DocRAG API", version="1.0.0")
 
+# Setup paths
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT_DIR / "data" / "raw" / "document" / "pdf"
 
-# Câu hỏi của user
+
+# Request/Response Models
 class AskRequest(BaseModel):
     question: str
 
@@ -26,9 +33,18 @@ class AskResponse(BaseModel):
     model: str
     citations: list[str] = []
 
+
+class UploadResponse(BaseModel):
+    status: str
+    message: str
+    file: str
+
+
 class RebuildResponse(BaseModel):
     message: str
     status: str
+    files: int = 0
+    chunks: int = 0
 
 
 def build_citation_list(metadatas: list[dict]) -> list[str]:
@@ -121,13 +137,47 @@ def ask_question(payload: AskRequest):
     )
 
 
-@app.post("/rebuild-rag", response_model=RebuildResponse)
-def rebuild_rag():
+@app.post("/upload-document", response_model=UploadResponse)
+def upload_document(file: UploadFile = File(...)):
+    """Chỉ lưu file PDF vào thư mục server (không chunk, không embed, không populate)"""
     try:
-        rebuild_rag_db()
-        return RebuildResponse(
-            message="Đã chạy lại populate DB thành công.",
+        # Kiểm tra file type
+        if not file.filename.endswith(".pdf"):
+            raise HTTPException(
+                status_code=400, 
+                detail="Chỉ chấp nhận file PDF"
+            )
+        
+        # Chỉ lưu file, không xử lý gì thêm
+        saved_path = save_upload_file(file, DATA_DIR)
+        
+        return UploadResponse(
             status="success",
+            message="File đã được lưu. Gọi /populate-db để xử lý.",
+            file=saved_path.name,
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Lỗi upload: {str(e)}"
+        )
+
+
+@app.post("/populate-db", response_model=RebuildResponse)
+def populate_db():
+    """Đọc toàn bộ file trong thư mục, chunk, embed, build lại DB"""
+    try:
+        result = rebuild_rag_database()
+        return RebuildResponse(
+            message=result.get("message", "Populate DB thành công"),
+            status=result.get("status", "success"),
+            files=result.get("files", 0),
+            chunks=result.get("chunks", 0),
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"rebuild error: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Lỗi populate: {str(e)}"
+        )

@@ -551,7 +551,9 @@ class Chunker:
         return Chunk(chunk_id=chunk_id, text=text, metadata=full_metadata)
 
     def _make_chunk_id(self, parent_id: str, index: int, text: str) -> str:
-        digest = hashlib.md5(f"{parent_id}:{index}:{text[:120]}".encode("utf-8")).hexdigest()[:12]
+        import time
+        raw = f"{parent_id}:{index}:{text[:120]}:{time.time_ns()}"
+        digest = hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
         return f"chunk_{digest}"
 
     def _normalize_for_dedup(self, text: str) -> str:
