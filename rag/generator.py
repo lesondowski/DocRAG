@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import json
 from typing import Any, Dict, Tuple
 
@@ -19,28 +20,34 @@ class Generator:
         self.client = genai.Client(api_key=api_key)
         self.default_model = os.getenv("GEMINI_GENERATE_MODEL", "gemini-2.5-flash")
         self.fallback_answer = (
-            "Tôi là trợ lý AI thông minh của ứng dụng Audit App "
-            "chỉ có thể trả lời các câu hỏi trong ứng dụng Audit này"
+            "Hiện tại tôi chưa thể trả lời câu hỏi này, "
+            "Bạn vui lòng liên hệ với Account hoặc TSM/MKT để được giải đáp thắc mắc. "
+            "Xin cảm ơn"
         )
 
     def _build_prompt(self, query: str, context: str) -> str:
-        context_section = f"\n\n[CONTEXT]\n{context}" if context and context.strip() else ""
-        return f"""Bạn là trợ lý AI thông minh của ứng dụng Audit App.
+        return f"""
+Bạn là trợ lý AI chuyên nghiệp của ứng dụng Audit App, hỗ trợ đội ngũ kinh doanh (Account, TSM, MKT) tra cứu thông tin và tư vấn nghiệp vụ.
 
-Quy tắc trả lời:
-1. Nếu câu hỏi là lời chào hỏi, hỏi về bản thân bạn, hoặc câu giao tiếp thông thường → trả lời tự nhiên, thân thiện.
-2. Nếu câu hỏi liên quan đến Audit App và có context → trả lời dựa trên context, sử dụng citation [1], [2]... khi cần.
-3. Nếu câu hỏi không liên quan đến Audit App và không phải chào hỏi → bắt buộc trả lời đúng câu: "{self.fallback_answer}"
-
-Giữ câu trả lời rõ ràng, ngắn gọn, chính xác.
+NGUYÊN TẮC TRẢ LỜI:
+1. Phân tích kỹ câu hỏi, sau đó tổng hợp thông tin từ tất cả các đoạn tài liệu liên quan.
+2. Ưu tiên thông tin trong tài liệu; nếu tài liệu chưa đủ, bổ sung bằng kiến thức chuyên môn phù hợp với ngữ cảnh.
+3. Trả lời bằng tiếng Việt, rõ ràng, chuyên nghiệp và đủ chi tiết để người đọc hiểu hoàn toàn.
+4. Nếu câu hỏi có nhiều khía cạnh, trình bày có cấu trúc (danh sách, bước thực hiện, v.v.).
+5. Giữ nguyên citation dạng [1], [2]... khi trích dẫn từ tài liệu.
+6. CHỈ trả lời "{self.fallback_answer}" khi câu hỏi hoàn toàn không liên quan đến lĩnh vực kinh doanh/audit và không có bất kỳ thông tin nào để hỗ trợ.
 
 [CÂU HỎI]
-{query}{context_section}
+{query}
 
-Yêu cầu output JSON hợp lệ:
+[NỘI DUNG TÀI LIỆU]
+{context}
+
+Yêu cầu output JSON (không bọc trong markdown):
 {{
-  "answer": "câu trả lời ở đây"
-}}""".strip()
+  "answer": "câu trả lời đầy đủ, chi tiết tại đây"
+}}
+""".strip()
 
     def generate(self, query: str, context: str, model_name: str | None = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         model = model_name or self.default_model
@@ -54,6 +61,12 @@ Yêu cầu output JSON hợp lệ:
         text = getattr(response, "text", "") or ""
         text = text.strip()
 
+        # Strip markdown code fences if present (e.g. ```json ... ```)
+        if text.startswith("```"):
+            text = re.sub(r'^```(?:json)?\s*\n?', '', text)
+            text = re.sub(r'\n?```\s*$', '', text)
+            text = text.strip()
+
         parsed: Dict[str, Any]
         try:
             parsed = json.loads(text)
@@ -62,14 +75,8 @@ Yêu cầu output JSON hợp lệ:
         except Exception:
             parsed = {"answer": self.fallback_answer}
 
-        answer_text = str(parsed.get("answer", "") or "").strip().lower()
-        blocked_patterns = [
-            "không đủ thông tin",
-            "khong du thong tin",
-            "ngoài phạm vi",
-            "ngoai pham vi",
-        ]
-        if any(pattern in answer_text for pattern in blocked_patterns):
+        answer_text = str(parsed.get("answer", "") or "").strip()
+        if not answer_text:
             parsed["answer"] = self.fallback_answer
 
         usage = getattr(response, "usage_metadata", None)

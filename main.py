@@ -53,12 +53,7 @@ def main() -> None:
             documents = retrieved_docs.get("documents")
 
             if not documents or not documents[0]:
-                selected_model, _ = token_manager.select_model(query)
-                try:
-                    gen_resp, _ = generator.generate(query, "", model_name=selected_model)
-                    print("\nAI:\n", gen_resp.get("answer", generator.fallback_answer))
-                except Exception:
-                    print("\nAI:\n", generator.fallback_answer)
+                print("AI: Hiện tại tôi chưa thể trả lời câu hỏi này, Bạn vui lòng liên hệ với Account hoặc TSM/MKT để được giải đáp thắc mắc. Xin cảm ơn")
                 continue
         except Exception as e:
             print(f"Lỗi Retrieve: {e}")
@@ -78,7 +73,10 @@ def main() -> None:
                 context,
                 model_name=selected_model,
             )
-            raw_answer = generated_response.get("answer", generator.fallback_answer)
+            raw_answer = generated_response.get(
+                "answer",
+                "Hiện tại tôi chưa thể trả lời câu hỏi này, Bạn vui lòng liên hệ với Account hoặc TSM/MKT để được giải đáp thắc mắc. Xin cảm ơn",
+            )
         except Exception as e:
             print(f"Lỗi Generate: {e}")
             continue

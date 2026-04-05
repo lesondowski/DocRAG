@@ -89,16 +89,10 @@ def ask_question(payload: AskRequest):
         metadatas = retrieved_docs.get("metadatas", [[]])[0]
 
         if not documents:
-            selected_model, _ = token_manager.select_model(question)
-            generated_response, _ = generator.generate(
-                query=question,
-                context="",
-                model_name=selected_model,
-            )
             return AskResponse(
                 question=question,
-                answer=generated_response.get("answer", generator.fallback_answer),
-                model=selected_model,
+                answer="Hiện tại tôi chưa thể trả lời câu hỏi này, Bạn vui lòng liên hệ với Account hoặc TSM/MKT để được giải đáp thắc mắc. Xin cảm ơn",
+                model="N/A",
                 citations=[],
             )
     except Exception as e:
@@ -116,7 +110,10 @@ def ask_question(payload: AskRequest):
             context=context,
             model_name=selected_model,
         )
-        raw_answer = generated_response.get("answer", generator.fallback_answer)
+        raw_answer = generated_response.get(
+            "answer",
+            "Hiện tại tôi chưa thể trả lời câu hỏi này, Bạn vui lòng liên hệ với Account hoặc TSM/MKT để được giải đáp thắc mắc. Xin cảm ơn",
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"generation error: {e}")
 
