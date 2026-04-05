@@ -5,22 +5,19 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent))
 
-from rag.embedding import GeminiEmbedder
-from rag.retriever import Retriever
-from rag.context_builder import ContextBuilder
-from rag.generator import Generator
 from rag.citation import CitationMapper
-from rag.token_manager import TokenManager
 
 
 def main() -> None:
 
     try:
-        embedder = GeminiEmbedder()
-        retriever = Retriever()
-        context_builder = ContextBuilder()
-        generator = Generator()
-        token_manager = TokenManager()
+        from rag.singletons import initialize_all
+        components = initialize_all()
+        embedder = components["embedder"]
+        retriever = components["retriever"]
+        context_builder = components["context_builder"]
+        generator = components["generator"]
+        token_manager = components["token_manager"]
     except Exception as e:
         if "does not exist" in str(e):
             print("\n[LỖI] Collection 'rag_documents' chưa tồn tại.")
@@ -56,7 +53,12 @@ def main() -> None:
             documents = retrieved_docs.get("documents")
 
             if not documents or not documents[0]:
-                print("AI: Không tìm thấy thông tin liên quan.")
+                selected_model, _ = token_manager.select_model(query)
+                try:
+                    gen_resp, _ = generator.generate(query, "", model_name=selected_model)
+                    print("\nAI:\n", gen_resp.get("answer", generator.fallback_answer))
+                except Exception:
+                    print("\nAI:\n", generator.fallback_answer)
                 continue
         except Exception as e:
             print(f"Lỗi Retrieve: {e}")
@@ -68,8 +70,7 @@ def main() -> None:
             print(f"Lỗi Context build: {e}")
             continue
 
-        selected_model, selection_reason = token_manager.select_model(query)
-        print(f"[Model Selection] {selection_reason}")
+        selected_model, _ = token_manager.select_model(query)
 
         try:
             generated_response, token_info = generator.generate(
@@ -77,10 +78,7 @@ def main() -> None:
                 context,
                 model_name=selected_model,
             )
-            raw_answer = generated_response.get(
-                "answer",
-                "Xin lỗi, tôi không thể tạo câu trả lời.",
-            )
+            raw_answer = generated_response.get("answer", generator.fallback_answer)
         except Exception as e:
             print(f"Lỗi Generate: {e}")
             continue
@@ -102,33 +100,10 @@ def main() -> None:
             except Exception:
                 pass
 
-        if token_info and token_info.get("total_tokens", 0) > 0:
-            query_log = token_manager.log_query(
-                query=query,
-                model_used=token_info.get("model", selected_model),
-                prompt_tokens=token_info.get("prompt_tokens", 0),
-                output_tokens=token_info.get("response_tokens", 0),
-                answer_preview=raw_answer,
-            )
-
-            print("-" * 50)
-            print(f"[Token Usage] Model: {query_log['model']}")
-            print(
-                f"  Prompt: {query_log['prompt_tokens']:,} | "
-                f"Output: {query_log['output_tokens']:,} | "
-                f"Total: {query_log['total_tokens']:,}"
-            )
-            print(f"  Cost: ${query_log['cost_usd']:.6f}")
-            print(f"  Session Cost: ${token_manager.session_stats['total_cost']:.6f}")
-            print("-" * 50)
-        else:
-            print("[Token Info] Could not retrieve token usage from API")
-
-    token_manager.print_session_summary()
     try:
         token_manager.save_session_log()
-    except Exception as e:
-        print(f"[Warning] Could not save session log: {e}")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

@@ -9,6 +9,9 @@ import google.genai as genai
 load_dotenv()
 
 
+from rag.embedding_cache import get_embedding_cache
+
+
 class GeminiEmbedder:
     def __init__(self) -> None:
         api_key = os.getenv("GEMINI_API_KEY")
@@ -17,17 +20,28 @@ class GeminiEmbedder:
 
         self.client = genai.Client(api_key=api_key)
         self.model_name = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-2-preview")
+        self.cache = get_embedding_cache()
 
     def embed_text(self, text: str) -> List[float]:
         text = (text or "").strip()
         if not text:
             return []
 
+        # Check cache first
+        cached = self.cache.get(text)
+        if cached is not None:
+            return cached
+
         response = self.client.models.embed_content(
             model=self.model_name,
             contents=text,
         )
-        return response.embeddings[0].values
+        embedding = response.embeddings[0].values
+
+        # Store in cache
+        self.cache.put(text, embedding)
+
+        return embedding
 
     def embed_chunks(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         embedded_chunks: List[Dict[str, Any]] = []

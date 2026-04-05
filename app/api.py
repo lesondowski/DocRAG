@@ -1,25 +1,25 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
-from rag.embedding import GeminiEmbedder
-from rag.retriever import Retriever
-from rag.context_builder import ContextBuilder
-from rag.generator import Generator
 from rag.citation import CitationMapper
-from rag.token_manager import TokenManager
+from rag.singletons import initialize_all, get_embedder, get_retriever, get_context_builder, get_generator, get_token_manager
 from app.service.rebuild import rebuild_rag_database
 from app.service.ingest import save_upload_file
 
-from pathlib import Path
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT_DIR / "data" / "raw" / "document" / "pdf"
 
 app = FastAPI(title="DocRAG API", version="1.0.0")
 
-# Setup paths
-ROOT_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / "data" / "raw" / "document" / "pdf"
+
+@app.on_event("startup")
+async def startup_event():
+    initialize_all()
 
 
 # Request/Response Models
@@ -52,11 +52,7 @@ def build_citation_list(metadatas: list[dict]) -> list[str]:
     for meta in metadatas:
         source = meta.get("source", "unknown")
         page = meta.get("page", "N/A")
-        section = meta.get("raw_section_heading") or meta.get("section_heading") or ""
-        item = f"{source}, trang {page}"
-        if section:
-            item += f", section={section}"
-        results.append(item)
+        results.append(f"{source}, trang {page}")
     return results
 
 
@@ -72,11 +68,11 @@ def ask_question(payload: AskRequest):
         raise HTTPException(status_code=400, detail="question is required")
 
     try:
-        embedder = GeminiEmbedder()
-        retriever = Retriever()
-        context_builder = ContextBuilder()
-        generator = Generator()
-        token_manager = TokenManager()
+        embedder = get_embedder()
+        retriever = get_retriever()
+        context_builder = get_context_builder()
+        generator = get_generator()
+        token_manager = get_token_manager()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"init error: {e}")
 
@@ -93,10 +89,16 @@ def ask_question(payload: AskRequest):
         metadatas = retrieved_docs.get("metadatas", [[]])[0]
 
         if not documents:
+            selected_model, _ = token_manager.select_model(question)
+            generated_response, _ = generator.generate(
+                query=question,
+                context="",
+                model_name=selected_model,
+            )
             return AskResponse(
                 question=question,
-                answer="Không tìm thấy thông tin liên quan trong tài liệu.",
-                model="N/A",
+                answer=generated_response.get("answer", generator.fallback_answer),
+                model=selected_model,
                 citations=[],
             )
     except Exception as e:
@@ -109,15 +111,12 @@ def ask_question(payload: AskRequest):
 
     try:
         selected_model, _ = token_manager.select_model(question)
-        generated_response, token_info = generator.generate(
+        generated_response, _ = generator.generate(
             query=question,
             context=context,
             model_name=selected_model,
         )
-        raw_answer = generated_response.get(
-            "answer",
-            "Xin lỗi, tôi không thể tạo câu trả lời.",
-        )
+        raw_answer = generated_response.get("answer", generator.fallback_answer)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"generation error: {e}")
 
