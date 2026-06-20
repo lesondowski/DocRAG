@@ -27,7 +27,7 @@ class Generator:
 
     def _build_prompt(self, query: str, context: str) -> str:
         return f"""
-Bạn là trợ lý AI chuyên nghiệp của ứng dụng Audit App, hỗ trợ đội ngũ kinh doanh (Account, TSM, MKT) tra cứu thông tin và tư vấn nghiệp vụ.
+Bạn là trợ lý AI chuyên nghiệp của ứng dụng Octopus App, hỗ trợ đội ngũ kinh doanh (Account, TSM, MKT) tra cứu thông tin và tư vấn nghiệp vụ.
 
 NGUYÊN TẮC TRẢ LỜI:
 1. Phân tích kỹ câu hỏi, sau đó tổng hợp thông tin từ tất cả các đoạn tài liệu liên quan.
